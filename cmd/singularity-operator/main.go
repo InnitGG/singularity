@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"innit.gg/singularity/internal/controllers"
+	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -15,8 +16,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -80,7 +79,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Fleet")
 		os.Exit(1)
 	}
-
+	if err = (&controllers.GameServerSetReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "GameServerSet")
+		os.Exit(1)
+	}
 	if err = (&controllers.GameServerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

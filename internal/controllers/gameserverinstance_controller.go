@@ -2,13 +2,12 @@ package controllers
 
 import (
 	"context"
+	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/v1alpha1"
 )
 
 // GameServerInstanceReconciler reconciles a GameServerInstance object

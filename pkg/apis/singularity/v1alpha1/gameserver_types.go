@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"innit.gg/singularity/pkg/apis"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,6 +38,7 @@ type GameServerList struct {
 type GameServerSpec struct {
 	// +kubebuilder:validation:Enum=Game;Ephemeral;Static
 	Type             string                     `json:"type"`
+	Scheduling       apis.SchedulingStrategy    `json:"scheduling"`
 	DrainStrategy    GameServerDrainStrategy    `json:"drainStrategy"`
 	Ports            []GameServerPort           `json:"ports"`
 	Instances        uint32                     `json:"instances"`

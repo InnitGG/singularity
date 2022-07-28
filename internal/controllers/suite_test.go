@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
 	"path/filepath"
 	"testing"
 
@@ -11,8 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

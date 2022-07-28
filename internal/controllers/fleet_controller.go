@@ -2,13 +2,11 @@ package controllers
 
 import (
 	"context"
-
+	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/v1alpha1"
 )
 
 // FleetReconciler reconciles a Fleet object
@@ -31,9 +29,14 @@ type FleetReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *FleetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	l := log.FromContext(ctx)
+	l.Info("reconcile", "req", req)
 
-	// TODO(user): your logic here
+	fleet := &singularityv1alpha1.Fleet{}
+	if err := r.Get(ctx, req.NamespacedName, fleet); err != nil {
+		l.Info("reconcile: resource deleted", "name", req.Name)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
 	return ctrl.Result{}, nil
 }
