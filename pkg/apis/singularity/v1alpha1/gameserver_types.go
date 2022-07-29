@@ -6,6 +6,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// GameServerTypeGame describes a game server which utilizes the allocation system
+	GameServerTypeGame GameServerType = "Game"
+	// GameServerTypeEphemeral describes a game server which is stateless
+	GameServerTypeEphemeral GameServerType = "Ephemeral"
+	// GameServerTypeStatic describes a game server which is manually controlled by the user
+	GameServerTypeStatic GameServerType = "Static"
+
+	// GameServerStateCreating indicates that the Pod is not yet created
+	GameServerStateCreating GameServerState = "Creating"
+	// GameServerStateStarting indicates that the Pod is created, but not yet scheduled
+	GameServerStateStarting GameServerState = "Starting"
+	// GameServerStateScheduled indicates that the Pod is scheduled in the cluster, basically belonging to a Node
+	GameServerStateScheduled GameServerState = "Scheduled"
+	// GameServerStateReady indicates that the server is ready to accept player (and optionally Allocated)
+	GameServerStateReady GameServerState = "Ready"
+	// GameServerStateAllocated indicates that the server has been allocated and shall not be removed
+	GameServerStateAllocated GameServerState = "Allocated"
+)
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
@@ -36,8 +56,7 @@ type GameServerList struct {
 
 // GameServerSpec defines the desired state of GameServer
 type GameServerSpec struct {
-	// +kubebuilder:validation:Enum=Game;Ephemeral;Static
-	Type             string                     `json:"type"`
+	Type             GameServerType             `json:"type"`
 	Scheduling       apis.SchedulingStrategy    `json:"scheduling"`
 	DrainStrategy    GameServerDrainStrategy    `json:"drainStrategy"`
 	Ports            []GameServerPort           `json:"ports"`
@@ -45,6 +64,9 @@ type GameServerSpec struct {
 	InstanceTemplate GameServerInstanceTemplate `json:"instanceTemplate"`
 	Template         v1.PodTemplateSpec         `json:"template"`
 }
+
+type GameServerType string
+type GameServerState string
 
 // GameServerStatus defines the observed state of GameServer
 type GameServerStatus struct {
@@ -57,10 +79,9 @@ type GameServerDrainStrategy struct {
 }
 
 type GameServerPort struct {
-	Name string `json:"name"`
-	// +kubebuilder:validation:Enum=Internal;Dynamic
-	PortPolicy    string `json:"portPolicy"`
-	ContainerPort string `json:"containerPort"`
+	Name          string          `json:"name"`
+	PortPolicy    apis.PortPolicy `json:"portPolicy"`
+	ContainerPort string          `json:"containerPort"`
 }
 
 func init() {
