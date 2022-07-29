@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: fleets.singularity.innit.gg
+  name: gameserversets.singularity.innit.gg
 spec:
   group: singularity.innit.gg
   names:
-    kind: Fleet
-    listKind: FleetList
-    plural: fleets
-    singular: fleet
+    kind: GameServerSet
+    listKind: GameServerSetList
+    plural: gameserversets
+    singular: gameserverset
   scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: Fleet is the Schema for the fleets API
+        description: GameServerSet is the Schema for the GameServerSets API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: FleetSpec defines the desired state of Fleet
+            description: GameServerSetSpec defines the desired state of GameServerSet
             properties:
               replicas:
                 format: int32
@@ -7994,7 +7994,7 @@ spec:
             - template
             type: object
           status:
-            description: FleetStatus defines the observed state of Fleet
+            description: GameServerSetStatus defines the observed state of GameServerSet
             properties:
               readyReplicas:
                 format: int32
@@ -8010,8 +8010,4 @@ spec:
     served: true
     storage: true
     subresources:
-      scale:
-        labelSelectorPath: .status.readyReplicas
-        specReplicasPath: .spec.replicas
-        statusReplicasPath: .status.replicas
       status: {}

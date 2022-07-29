@@ -11,8 +11,8 @@ resources:
     domain: innit.gg
     group: singularity
     kind: Fleet
-    path: innit.gg/singularity/pkg/apis/singularity/v1alpha1
-    version: v1alpha1
+    path: innit.gg/singularity/pkg/apis/singularity/v1
+    version: v1
   - api:
       crdVersion: v1
       namespaced: true
@@ -20,8 +20,8 @@ resources:
     domain: innit.gg
     group: singularity
     kind: GameServerSet
-    path: innit.gg/singularity/pkg/apis/singularity/v1alpha1
-    version: v1alpha1
+    path: innit.gg/singularity/pkg/apis/singularity/v1
+    version: v1
   - api:
       crdVersion: v1
       namespaced: true
@@ -29,8 +29,8 @@ resources:
     domain: innit.gg
     group: singularity
     kind: GameServer
-    path: innit.gg/singularity/pkg/apis/singularity/v1alpha1
-    version: v1alpha1
+    path: innit.gg/singularity/pkg/apis/singularity/v1
+    version: v1
   - api:
       crdVersion: v1
       namespaced: true
@@ -38,6 +38,6 @@ resources:
     domain: innit.gg
     group: singularity
     kind: GameServerInstance
-    path: innit.gg/singularity/pkg/apis/singularity/v1alpha1
-    version: v1alpha1
+    path: innit.gg/singularity/pkg/apis/singularity/v1
+    version: v1
 version: "3"

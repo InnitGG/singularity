@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
+	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,16 +35,16 @@ func (r *FleetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	l.Info("reconcile", "req", req)
 
 	// Retrieve the Fleet resource from the cluster, ignoring if it was deleted
-	fleet := &singularityv1alpha1.Fleet{}
+	fleet := &singularityv1.Fleet{}
 	if err := r.Get(ctx, req.NamespacedName, fleet); err != nil {
 		l.Info("reconcile: resource deleted", "fleet", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Retrieve GameServerSets associated with this Fleet
-	gsSetList := &singularityv1alpha1.GameServerSetList{}
+	gsSetList := &singularityv1.GameServerSetList{}
 	labelSelector := client.MatchingLabels{
-		singularityv1alpha1.FleetNameLabel: req.Name,
+		singularityv1.FleetNameLabel: req.Name,
 	}
 	if err := r.List(ctx, gsSetList, labelSelector); err != nil {
 		l.Error(err, "reconcile: unable to list GameServerSet", "fleet", req.Name)
@@ -84,12 +84,12 @@ func (r *FleetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller with the Manager.
 func (r *FleetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&singularityv1alpha1.Fleet{}).
+		For(&singularityv1.Fleet{}).
 		Complete(r)
 }
 
 // handleDeployment performs the deployment strategy
-func (r *FleetReconciler) handleDeployment(ctx context.Context, fleet *singularityv1alpha1.Fleet, active *singularityv1alpha1.GameServerSet, rest []*singularityv1alpha1.GameServerSet) (uint32, error) {
+func (r *FleetReconciler) handleDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	if len(rest) == 0 {
 		// There is only one GameServerSet which matches the desired state.
 		// Further action is not required.
@@ -100,7 +100,7 @@ func (r *FleetReconciler) handleDeployment(ctx context.Context, fleet *singulari
 	return r.handleRollingUpdateDeployment(ctx, fleet, active, rest)
 }
 
-func (r *FleetReconciler) handleRollingUpdateDeployment(ctx context.Context, fleet *singularityv1alpha1.Fleet, active *singularityv1alpha1.GameServerSet, rest []*singularityv1alpha1.GameServerSet) (uint32, error) {
+func (r *FleetReconciler) handleRollingUpdateDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	// First, start by rolling out update for the current active GameServerSet
 	replicas, err := r.handleRollingUpdateActive(fleet, active, rest)
 	if err != nil {
@@ -110,15 +110,15 @@ func (r *FleetReconciler) handleRollingUpdateDeployment(ctx context.Context, fle
 	return replicas, nil
 }
 
-func (r *FleetReconciler) handleRollingUpdateActive(fleet *singularityv1alpha1.Fleet, active *singularityv1alpha1.GameServerSet, rest []*singularityv1alpha1.GameServerSet) (uint32, error) {
+func (r *FleetReconciler) handleRollingUpdateActive(fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	// TODO
 
 	return 0, nil
 }
 
-func (r *FleetReconciler) filterActiveGameServerSet(fleet *singularityv1alpha1.Fleet, list *singularityv1alpha1.GameServerSetList) (*singularityv1alpha1.GameServerSet, []*singularityv1alpha1.GameServerSet) {
-	var active *singularityv1alpha1.GameServerSet
-	var rest []*singularityv1alpha1.GameServerSet
+func (r *FleetReconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list *singularityv1.GameServerSetList) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
+	var active *singularityv1.GameServerSet
+	var rest []*singularityv1.GameServerSet
 
 	for _, gsSet := range list.Items {
 		// If the actual state is equal to the desired state

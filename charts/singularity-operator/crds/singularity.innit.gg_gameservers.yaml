@@ -15,7 +15,7 @@ spec:
     singular: gameserver
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: GameServer is the Schema for the GameServers API
@@ -69,9 +69,8 @@ spec:
                     name:
                       type: string
                     portPolicy:
-                      enum:
-                      - Internal
-                      - Dynamic
+                      description: PortPolicy determines how Singularity should expose
+                        the game server.
                       type: string
                   required:
                   - containerPort
@@ -79,6 +78,10 @@ spec:
                   - portPolicy
                   type: object
                 type: array
+              scheduling:
+                description: SchedulingStrategy determines how Singularity should
+                  schedule Pods across the cluster.
+                type: string
               template:
                 description: PodTemplateSpec describes the data a pod should have
                   when created from a template
@@ -7165,16 +7168,13 @@ spec:
                     type: object
                 type: object
               type:
-                enum:
-                - Game
-                - Ephemeral
-                - Static
                 type: string
             required:
             - drainStrategy
             - instanceTemplate
             - instances
             - ports
+            - scheduling
             - template
             - type
             type: object

@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
+	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
 	"path/filepath"
 	"testing"
 
@@ -48,7 +48,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = singularityv1alpha1.AddToScheme(scheme.Scheme)
+	err = singularityv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

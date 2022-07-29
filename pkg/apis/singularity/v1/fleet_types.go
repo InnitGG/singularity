@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	"innit.gg/singularity/pkg/apis"

@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
+	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,6 +40,6 @@ func (r *GameServerInstanceReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *GameServerInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&singularityv1alpha1.GameServerInstance{}).
+		For(&singularityv1.GameServerInstance{}).
 		Complete(r)
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"innit.gg/singularity/internal/controllers"
-	singularityv1alpha1 "innit.gg/singularity/pkg/apis/singularity/v1alpha1"
+	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -27,7 +27,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(singularityv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(singularityv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
