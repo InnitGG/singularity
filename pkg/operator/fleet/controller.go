@@ -1,4 +1,4 @@
-package controllers
+package fleet
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// FleetReconciler reconciles a Fleet object
-type FleetReconciler struct {
+// Reconciler reconciles a Fleet object
+type Reconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -30,7 +30,7 @@ type FleetReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
-func (r *FleetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 	l.Info("reconcile", "req", req)
 
@@ -82,14 +82,14 @@ func (r *FleetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *FleetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&singularityv1.Fleet{}).
 		Complete(r)
 }
 
 // handleDeployment performs the deployment strategy
-func (r *FleetReconciler) handleDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
+func (r *Reconciler) handleDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	if len(rest) == 0 {
 		// There is only one GameServerSet which matches the desired state.
 		// Further action is not required.
@@ -100,7 +100,7 @@ func (r *FleetReconciler) handleDeployment(ctx context.Context, fleet *singulari
 	return r.handleRollingUpdateDeployment(ctx, fleet, active, rest)
 }
 
-func (r *FleetReconciler) handleRollingUpdateDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
+func (r *Reconciler) handleRollingUpdateDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	// First, start by rolling out update for the current active GameServerSet
 	replicas, err := r.handleRollingUpdateActive(fleet, active, rest)
 	if err != nil {
@@ -110,13 +110,13 @@ func (r *FleetReconciler) handleRollingUpdateDeployment(ctx context.Context, fle
 	return replicas, nil
 }
 
-func (r *FleetReconciler) handleRollingUpdateActive(fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
+func (r *Reconciler) handleRollingUpdateActive(fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
 	// TODO
 
 	return 0, nil
 }
 
-func (r *FleetReconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list *singularityv1.GameServerSetList) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
+func (r *Reconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list *singularityv1.GameServerSetList) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
 	var active *singularityv1.GameServerSet
 	var rest []*singularityv1.GameServerSet
 

@@ -1,4 +1,4 @@
-package controllers
+package gameserver
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// GameServerReconciler reconciles a GameServer object
-type GameServerReconciler struct {
+// Reconciler reconciles a GameServer object
+type Reconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -29,7 +29,7 @@ type GameServerReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
-func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -38,7 +38,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GameServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&singularityv1.GameServer{}).
 		Complete(r)

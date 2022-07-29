@@ -2,8 +2,11 @@ package main
 
 import (
 	"flag"
-	"innit.gg/singularity/internal/controllers"
 	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
+	"innit.gg/singularity/pkg/operator/fleet"
+	"innit.gg/singularity/pkg/operator/gameserver"
+	"innit.gg/singularity/pkg/operator/gameserverinstance"
+	"innit.gg/singularity/pkg/operator/gameserverset"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -72,28 +75,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.FleetReconciler{
+	if err = (&fleet.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Fleet")
 		os.Exit(1)
 	}
-	if err = (&controllers.GameServerSetReconciler{
+	if err = (&gameserverset.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerSet")
 		os.Exit(1)
 	}
-	if err = (&controllers.GameServerReconciler{
+	if err = (&gameserver.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServer")
 		os.Exit(1)
 	}
-	if err = (&controllers.GameServerInstanceReconciler{
+	if err = (&gameserverinstance.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
