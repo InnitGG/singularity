@@ -37,9 +37,22 @@ spec:
             properties:
               drainStrategy:
                 properties:
+                  allocatedInstances:
+                    format: int32
+                    type: integer
+                  instances:
+                    format: int32
+                    type: integer
+                  readyInstances:
+                    format: int32
+                    type: integer
                   timeout:
                     format: int32
                     type: integer
+                required:
+                - allocatedInstances
+                - instances
+                - readyInstances
                 type: object
               instanceTemplate:
                 description: GameServerInstanceTemplate is the template for the GameServerInstances

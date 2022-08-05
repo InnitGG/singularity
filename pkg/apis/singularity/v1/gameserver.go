@@ -24,6 +24,11 @@ const (
 	GameServerStateReady GameServerState = "Ready"
 	// GameServerStateAllocated indicates that the server has been allocated and shall not be removed
 	GameServerStateAllocated GameServerState = "Allocated"
+	// GameServerStateDrain indicates the server is no longer accepting new players, and is waiting for existing
+	// instances to be shut down.
+	GameServerStateDrain GameServerState = "Drain"
+	// GameServerStateShutdown indicates that the server has shutdown and everything has to be removed from the cluster
+	GameServerStateShutdown GameServerState = "Shutdown"
 )
 
 //+kubebuilder:object:root=true
@@ -60,7 +65,7 @@ type GameServerSpec struct {
 	Scheduling       apis.SchedulingStrategy    `json:"scheduling"`
 	DrainStrategy    GameServerDrainStrategy    `json:"drainStrategy"`
 	Ports            []GameServerPort           `json:"ports"`
-	Instances        uint32                     `json:"instances"`
+	Instances        int32                      `json:"instances"`
 	InstanceTemplate GameServerInstanceTemplate `json:"instanceTemplate"`
 	Template         v1.PodTemplateSpec         `json:"template"`
 }
@@ -75,7 +80,10 @@ type GameServerStatus struct {
 }
 
 type GameServerDrainStrategy struct {
-	Timeout uint32 `json:"timeout,omitempty"`
+	Timeout            int32 `json:"timeout,omitempty"`
+	Instances          int32 `json:"instances"`
+	ReadyInstances     int32 `json:"readyInstances"`
+	AllocatedInstances int32 `json:"allocatedInstances"`
 }
 
 type GameServerPort struct {

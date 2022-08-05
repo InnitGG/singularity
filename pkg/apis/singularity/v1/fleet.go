@@ -3,6 +3,7 @@ package v1
 import (
 	"innit.gg/singularity/pkg/apis"
 	"innit.gg/singularity/pkg/apis/singularity"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,15 +36,21 @@ type FleetList struct {
 
 // FleetSpec defines the desired state of Fleet
 type FleetSpec struct {
-	Replicas   uint32                  `json:"replicas"`
-	Scheduling apis.SchedulingStrategy `json:"scheduling"`
-	Template   GameServerTemplate      `json:"template"`
+	Replicas   int32                     `json:"replicas"`
+	Strategy   appsv1.DeploymentStrategy `json:"strategy"`
+	Scheduling apis.SchedulingStrategy   `json:"scheduling"`
+	Template   GameServerTemplate        `json:"template"`
 }
 
 // FleetStatus defines the observed state of Fleet
 type FleetStatus struct {
-	Replicas      uint32 `json:"replicas"`
-	ReadyReplicas uint32 `json:"readyReplicas"`
+	Replicas           int32 `json:"replicas"`
+	ReadyReplicas      int32 `json:"readyReplicas"`
+	AllocatedReplicas  int32 `json:"allocatedReplicas"`
+	Instances          int32 `json:"instances"`
+	ReadyInstances     int32 `json:"readyInstances"`
+	AllocatedInstances int32 `json:"allocatedInstances"`
+	ShutdownInstances  int32 `json:"shutdownInstances"`
 }
 
 // GameServerSet returns a single GameServerSet for this Fleet definition
@@ -71,6 +78,68 @@ func (f *Fleet) GameServerSet() *GameServerSet {
 	gsSet.ObjectMeta.Labels[FleetNameLabel] = f.ObjectMeta.Name
 
 	return gsSet
+}
+
+// CountStatusReadyReplicas returns the count of GameServer with GameServerStateReady in a list of GameServerSet
+func CountStatusReadyReplicas(list []*GameServerSet) int32 {
+	total := int32(0)
+	for _, gsSet := range list {
+		if gsSet != nil {
+			total += gsSet.Status.ReadyReplicas
+		}
+	}
+
+	return total
+}
+
+// CountStatusAllocatedReplicas returns the count of GameServer with GameServerStateAllocated in a list of GameServerSet
+func CountStatusAllocatedReplicas(list []*GameServerSet) int32 {
+	total := int32(0)
+	for _, gsSet := range list {
+		if gsSet != nil {
+			total += gsSet.Status.AllocatedReplicas
+		}
+	}
+
+	return total
+}
+
+func CountStatusReplicas(list []*GameServerSet) int32 {
+	total := int32(0)
+	for _, gsSet := range list {
+		if gsSet != nil {
+			total += gsSet.Status.Replicas
+		}
+	}
+
+	return total
+}
+
+func CountSpecReplicas(list []*GameServerSet) int32 {
+	total := int32(0)
+	for _, gsSet := range list {
+		if gsSet != nil {
+			total += gsSet.Spec.Replicas
+		}
+	}
+
+	return total
+}
+
+// UpperBoundReplicas returns whichever is smaller, the value i, or the Fleet's desired replicas.
+func (f *Fleet) UpperBoundReplicas(i int32) int32 {
+	if i > f.Spec.Replicas {
+		return f.Spec.Replicas
+	}
+	return i
+}
+
+// LowerBoundReplicas returns 0 if parameter i is less than zero
+func (f *Fleet) LowerBoundReplicas(i int32) int32 {
+	if i < 0 {
+		return 0
+	}
+	return i
 }
 
 func init() {

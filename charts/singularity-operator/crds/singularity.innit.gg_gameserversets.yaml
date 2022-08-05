@@ -53,9 +53,22 @@ spec:
                     properties:
                       drainStrategy:
                         properties:
+                          allocatedInstances:
+                            format: int32
+                            type: integer
+                          instances:
+                            format: int32
+                            type: integer
+                          readyInstances:
+                            format: int32
+                            type: integer
                           timeout:
                             format: int32
                             type: integer
+                        required:
+                        - allocatedInstances
+                        - instances
+                        - readyInstances
                         type: object
                       instanceTemplate:
                         description: GameServerInstanceTemplate is the template for
@@ -7996,15 +8009,35 @@ spec:
           status:
             description: GameServerSetStatus defines the observed state of GameServerSet
             properties:
+              allocatedInstances:
+                format: int32
+                type: integer
+              allocatedReplicas:
+                format: int32
+                type: integer
+              instances:
+                format: int32
+                type: integer
+              readyInstances:
+                format: int32
+                type: integer
               readyReplicas:
                 format: int32
                 type: integer
               replicas:
                 format: int32
                 type: integer
+              shutdownInstances:
+                format: int32
+                type: integer
             required:
+            - allocatedInstances
+            - allocatedReplicas
+            - instances
+            - readyInstances
             - readyReplicas
             - replicas
+            - shutdownInstances
             type: object
         type: object
     served: true

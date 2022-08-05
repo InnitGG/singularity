@@ -35,15 +35,20 @@ type GameServerSetList struct {
 
 // GameServerSetSpec defines the desired state of GameServerSet
 type GameServerSetSpec struct {
-	Replicas   uint32                  `json:"replicas"`
+	Replicas   int32                   `json:"replicas"`
 	Scheduling apis.SchedulingStrategy `json:"scheduling"`
 	Template   GameServerTemplate      `json:"template"`
 }
 
 // GameServerSetStatus defines the observed state of GameServerSet
 type GameServerSetStatus struct {
-	Replicas      uint32 `json:"replicas"`
-	ReadyReplicas uint32 `json:"readyReplicas"`
+	Replicas           int32 `json:"replicas"`
+	ReadyReplicas      int32 `json:"readyReplicas"`
+	AllocatedReplicas  int32 `json:"allocatedReplicas"`
+	Instances          int32 `json:"instances"`
+	ReadyInstances     int32 `json:"readyInstances"`
+	AllocatedInstances int32 `json:"allocatedInstances"`
+	ShutdownInstances  int32 `json:"shutdownInstances"`
 }
 
 // GameServer returns a single GameServer for this GameServerSet specification

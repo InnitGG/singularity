@@ -2,7 +2,9 @@ package fleet
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -89,31 +91,20 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // handleDeployment performs the deployment strategy
-func (r *Reconciler) handleDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
+// https://github.com/googleforgames/agones/blob/8d01f2ce9c34ffadfdf22ab2fb3b1bafae7e6389/pkg/fleets/controller.go#L356
+func (r *Reconciler) handleDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (int32, error) {
 	if len(rest) == 0 {
 		// There is only one GameServerSet which matches the desired state.
 		// Further action is not required.
 		return fleet.Spec.Replicas, nil
 	}
 
-	// TODO: user-specified deployment strategy
-	return r.handleRollingUpdateDeployment(ctx, fleet, active, rest)
-}
-
-func (r *Reconciler) handleRollingUpdateDeployment(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
-	// First, start by rolling out update for the current active GameServerSet
-	replicas, err := r.handleRollingUpdateActive(fleet, active, rest)
-	if err != nil {
-		return 0, err
+	switch fleet.Spec.Strategy.Type {
+	case appsv1.RollingUpdateDeploymentStrategyType:
+		return r.handleRollingUpdateDeployment(ctx, fleet, active, rest)
 	}
 
-	return replicas, nil
-}
-
-func (r *Reconciler) handleRollingUpdateActive(fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, rest []*singularityv1.GameServerSet) (uint32, error) {
-	// TODO
-
-	return 0, nil
+	return 0, errors.Errorf("unexpected deployment strategy type: %s", fleet.Spec.Strategy.Type)
 }
 
 func (r *Reconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list *singularityv1.GameServerSetList) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
