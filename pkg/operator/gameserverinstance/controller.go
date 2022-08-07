@@ -2,18 +2,20 @@ package gameserverinstance
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
-
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Reconciler reconciles a GameServerInstance object
 type Reconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Recorder record.EventRecorder
+	Log      logr.Logger
 }
 
 //+kubebuilder:rbac:groups=singularity.innit.gg,resources=GameServerInstances,verbs=get;list;watch;create;update;patch;delete
@@ -41,5 +43,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&singularityv1.GameServerInstance{}).
+		WithLogConstructor(func(req *reconcile.Request) logr.Logger {
+			if req != nil {
+				return r.Log.WithValues("req", req)
+			}
+			return r.Log
+		}).
 		Complete(r)
 }

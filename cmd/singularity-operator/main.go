@@ -77,29 +77,38 @@ func main() {
 
 	if err = (&fleet.Reconciler{
 		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("fleet-controller"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Fleet")
 		os.Exit(1)
 	}
+	//+kubebuilder:scaffold:builder
+
 	if err = (&gameserverset.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Recorder: mgr.GetEventRecorderFor("gameserverset-controller"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerSet")
 		os.Exit(1)
 	}
+	//+kubebuilder:scaffold:builder
+
 	if err = (&gameserver.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Recorder: mgr.GetEventRecorderFor("gameserver-controller"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServer")
 		os.Exit(1)
 	}
+	//+kubebuilder:scaffold:builder
+
 	if err = (&gameserverinstance.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Recorder: mgr.GetEventRecorderFor("gameserverinstance-controller"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerInstance")
 		os.Exit(1)
