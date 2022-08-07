@@ -2,9 +2,12 @@ package fleet
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/integer"
 )
 
 // https://github.com/googleforgames/agones/blob/8d01f2ce9c34ffadfdf22ab2fb3b1bafae7e6389/pkg/fleets/controller.go#L415
@@ -104,8 +107,54 @@ func (r *Reconciler) handleRollingUpdateRest(ctx context.Context, fleet *singula
 		return nil
 	}
 
-	// TODO: clean up unhealthy replicas
+	if _, err = r.cleanupUnhealthyReplicas(ctx, rest, fleet, maxScaleDown); err != nil {
+		// There could be the case when GameServerSet would be updated from another place, say Status or Spec would be updated
+		// We don't want to propagate such errors further
+		// And this set in sync with reconcileOldReplicaSets() Kubernetes code
+		return nil
+	}
 	// TODO: scale down
 
 	return nil
+}
+
+func (r *Reconciler) cleanupUnhealthyReplicas(ctx context.Context, rest []*singularityv1.GameServerSet,
+	fleet *singularityv1.Fleet, maxCleanupCount int32) (int32, error) {
+
+	// Safely scale down all old GameServerSets with unhealthy replicas.
+	totalScaledDown := int32(0)
+	for i, gsSet := range rest {
+		if totalScaledDown >= maxCleanupCount {
+			// We have scaled down enough.
+			break
+		}
+		if gsSet.Spec.Replicas == 0 {
+			// Cannot scale down this replica set.
+			continue
+		}
+		if gsSet.Spec.Replicas == gsSet.Status.ReadyReplicas {
+			// No unhealthy replicas found, no scaling required
+			continue
+		}
+
+		scaledDownCount := int32(integer.IntMin(int(maxCleanupCount-totalScaledDown), int(gsSet.Spec.Replicas-gsSet.Status.ReadyReplicas)))
+		newReplicasCount := gsSet.Spec.Replicas - scaledDownCount
+		if newReplicasCount > gsSet.Spec.Replicas {
+			return 0, fmt.Errorf("invalid scale down request %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
+		}
+
+		gsSetCopy := gsSet.DeepCopy()
+		gsSetCopy.Spec.Replicas = newReplicasCount
+		totalScaledDown += scaledDownCount
+		if err := r.Update(ctx, gsSetCopy); err != nil {
+			return totalScaledDown, errors.Wrapf(err, "error updating gameserverset %s/%s", gsSetCopy.Namespace, gsSetCopy.ObjectMeta.Name)
+		}
+
+		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "ScalingGameServerSet",
+			"scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
+
+		rest[i] = gsSetCopy
+	}
+
+	return totalScaledDown, nil
 }

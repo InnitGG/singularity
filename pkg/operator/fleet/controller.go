@@ -7,6 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -16,7 +17,8 @@ import (
 // Reconciler reconciles a Fleet object
 type Reconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=singularity.innit.gg,resources=fleets,verbs=get;list;watch;create;update;patch;delete
@@ -114,7 +116,6 @@ func (r *Reconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list 
 	for _, gsSet := range list.Items {
 		// If the actual state is equal to the desired state
 		if equality.Semantic.DeepEqual(gsSet.Spec.Template, fleet.Spec.Template) {
-			// TODO: can there be multiple active GameServerSets somehow?
 			active = &gsSet
 		} else {
 			rest = append(rest, &gsSet)
