@@ -1,10 +1,12 @@
 package v1
 
 import (
+	"context"
 	"innit.gg/singularity/pkg/apis"
 	"innit.gg/singularity/pkg/apis/singularity"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -50,7 +52,6 @@ type FleetStatus struct {
 	Instances          int32 `json:"instances"`
 	ReadyInstances     int32 `json:"readyInstances"`
 	AllocatedInstances int32 `json:"allocatedInstances"`
-	ShutdownInstances  int32 `json:"shutdownInstances"`
 }
 
 // GameServerSet returns a single GameServerSet for this Fleet definition
@@ -64,8 +65,12 @@ func (f *Fleet) GameServerSet() *GameServerSet {
 	}
 
 	// Generate a unique name for GameServerSet, ensuring there are no collisions.
+	// Also, reset the ObjectMeta.
 	gsSet.ObjectMeta.GenerateName = f.ObjectMeta.Name + "-"
+	gsSet.ObjectMeta.Name = ""
 	gsSet.ObjectMeta.Namespace = f.ObjectMeta.Namespace
+	gsSet.ObjectMeta.ResourceVersion = ""
+	gsSet.ObjectMeta.UID = ""
 
 	ref := metav1.NewControllerRef(f, GroupVersion.WithKind("Fleet"))
 	gsSet.ObjectMeta.OwnerReferences = append(gsSet.ObjectMeta.OwnerReferences, *ref)
@@ -78,6 +83,27 @@ func (f *Fleet) GameServerSet() *GameServerSet {
 	gsSet.ObjectMeta.Labels[FleetNameLabel] = f.ObjectMeta.Name
 
 	return gsSet
+}
+
+// ListGameServerSet lists all owned GameServerSet
+func (f *Fleet) ListGameServerSet(ctx context.Context, c client.Client) ([]*GameServerSet, error) {
+	list := &GameServerSetList{}
+	labelSelector := client.MatchingLabels{
+		FleetNameLabel: f.ObjectMeta.Name,
+	}
+	if err := c.List(ctx, list, labelSelector); err != nil {
+		return []*GameServerSet{}, err
+	}
+
+	// Make sure that the Fleet actually owns it
+	var result []*GameServerSet
+	for _, gsSet := range list.Items {
+		if metav1.IsControlledBy(&gsSet, f) {
+			result = append(result, &gsSet)
+		}
+	}
+
+	return result, nil
 }
 
 // CountStatusReadyReplicas returns the count of GameServer with GameServerStateReady in a list of GameServerSet

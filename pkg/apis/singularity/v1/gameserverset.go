@@ -45,6 +45,7 @@ type GameServerSetStatus struct {
 	Replicas           int32 `json:"replicas"`
 	ReadyReplicas      int32 `json:"readyReplicas"`
 	AllocatedReplicas  int32 `json:"allocatedReplicas"`
+	ShutdownReplicas   int32 `json:"shutdownReplicas"`
 	Instances          int32 `json:"instances"`
 	ReadyInstances     int32 `json:"readyInstances"`
 	AllocatedInstances int32 `json:"allocatedInstances"`
@@ -61,8 +62,12 @@ func (gsSet *GameServerSet) GameServer() *GameServer {
 	gs.Spec.Scheduling = gsSet.Spec.Scheduling
 
 	// Generate a unique name for GameServerSet, ensuring there are no collisions.
+	// Also, reset the ObjectMeta.
 	gs.ObjectMeta.GenerateName = gsSet.ObjectMeta.Name + "-"
+	gs.ObjectMeta.Name = ""
 	gs.ObjectMeta.Namespace = gsSet.ObjectMeta.Namespace
+	gs.ObjectMeta.ResourceVersion = ""
+	gs.ObjectMeta.UID = ""
 
 	ref := metav1.NewControllerRef(gsSet, GroupVersion.WithKind("GameServerSet"))
 	gs.ObjectMeta.OwnerReferences = append(gs.ObjectMeta.OwnerReferences, *ref)

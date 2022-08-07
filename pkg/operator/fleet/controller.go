@@ -5,7 +5,9 @@ import (
 	"github.com/pkg/errors"
 	singularityv1 "innit.gg/singularity/pkg/apis/singularity/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,16 +27,9 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=singularity.innit.gg,resources=fleets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=singularity.innit.gg,resources=fleets/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Fleet object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// TODO: retry on error?
+
 	l := log.FromContext(ctx)
 	l.Info("reconcile", "req", req)
 
@@ -46,11 +41,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Retrieve GameServerSets associated with this Fleet
-	gsSetList := &singularityv1.GameServerSetList{}
-	labelSelector := client.MatchingLabels{
-		singularityv1.FleetNameLabel: req.Name,
-	}
-	if err := r.List(ctx, gsSetList, labelSelector); err != nil {
+	list, err := fleet.ListGameServerSet(ctx, r)
+	if err != nil {
 		l.Error(err, "reconcile: unable to list GameServerSet", "fleet", req.Name)
 
 		// TODO: is this the correct way?
@@ -61,7 +53,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Find the active GameServerSet and return the rest
-	active, rest := r.filterActiveGameServerSet(fleet, gsSetList)
+	active, rest := r.filterActiveGameServerSet(fleet, list)
 	if active == nil {
 		l.Info("reconcile: creating GameServerSet", "fleet", req.Name)
 
@@ -71,16 +63,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Run the deployment cycle
-	_, err := r.handleDeployment(ctx, fleet, active, rest)
+	replicas, err := r.handleDeployment(ctx, fleet, active, rest)
 	if err != nil {
 		l.Error(err, "reconcile: deployment cycle failed", "fleet", req.Name)
 		return ctrl.Result{}, err
 	}
 
-	// TODO: Delete empty GameServerSet
-	// TODO: Insert the new (active) GameServerSet, if required
-	// TODO: Update the active GameServerSet to match the desired replicas
-	// TODO: Update Fleet status
+	if err = r.deleteEmptyGameServerSets(ctx, fleet, rest); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err = r.upsertGameServerSet(ctx, fleet, active, replicas); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err = r.updateStatus(ctx, fleet); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -109,18 +108,96 @@ func (r *Reconciler) handleDeployment(ctx context.Context, fleet *singularityv1.
 	return 0, errors.Errorf("unexpected deployment strategy type: %s", fleet.Spec.Strategy.Type)
 }
 
-func (r *Reconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list *singularityv1.GameServerSetList) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
+func (r *Reconciler) filterActiveGameServerSet(fleet *singularityv1.Fleet, list []*singularityv1.GameServerSet) (*singularityv1.GameServerSet, []*singularityv1.GameServerSet) {
 	var active *singularityv1.GameServerSet
 	var rest []*singularityv1.GameServerSet
 
-	for _, gsSet := range list.Items {
+	for _, gsSet := range list {
 		// If the actual state is equal to the desired state
 		if equality.Semantic.DeepEqual(gsSet.Spec.Template, fleet.Spec.Template) {
-			active = &gsSet
+			active = gsSet
 		} else {
-			rest = append(rest, &gsSet)
+			rest = append(rest, gsSet)
 		}
 	}
 
 	return active, rest
+}
+
+// deleteEmptyGameServerSets deletes all GameServerSets with 0 replicas
+func (r *Reconciler) deleteEmptyGameServerSets(ctx context.Context, fleet *singularityv1.Fleet, list []*singularityv1.GameServerSet) error {
+	policy := client.PropagationPolicy(metav1.DeletePropagationBackground)
+	for _, gsSet := range list {
+		if gsSet.Status.Replicas == 0 && gsSet.Status.ShutdownReplicas == 0 {
+			if err := r.Delete(ctx, gsSet, policy); err != nil {
+				return errors.Wrapf(err, "error deleting gameserverset %s/%s", gsSet.ObjectMeta.Namespace, gsSet.ObjectMeta.Name)
+			}
+
+			r.Recorder.Eventf(fleet, v1.EventTypeNormal, "DeletingGameServerSet", "deleting inactive GameServerSet %s", gsSet.ObjectMeta.Name)
+		}
+	}
+
+	return nil
+}
+
+// upsertGameServerSet inserts the new GameServerSet (if required)
+// and updates the active GameServerSet to match the desired state
+func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularityv1.Fleet, active *singularityv1.GameServerSet, replicas int32) error {
+	if active.UID == "" {
+		active.Spec.Replicas = replicas
+		if err := r.Create(ctx, active); err != nil {
+			return errors.Wrapf(err, "error creating gameserverset %s", active.ObjectMeta.Name)
+		}
+
+		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "CreatingGameServerSet", "created GameServerSet %s", active.ObjectMeta.Name)
+		return nil
+	}
+
+	if replicas != active.Spec.Replicas || active.Spec.Scheduling != fleet.Spec.Scheduling {
+		gsSetCopy := active.DeepCopy()
+		gsSetCopy.Spec.Replicas = replicas
+		gsSetCopy.Spec.Scheduling = fleet.Spec.Scheduling
+		if err := r.Update(ctx, gsSetCopy); err != nil {
+			return errors.Wrapf(err, "error updating replicas for gameserverset %s/%s", active.ObjectMeta.Namespace, active.ObjectMeta.Name)
+		}
+		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "ScalingGameServerSet",
+			"scaling active GameServerSet %s from %d to %d", active.ObjectMeta.Name, active.Spec.Replicas, gsSetCopy.Spec.Replicas)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, fleet *singularityv1.Fleet) error {
+	// TODO: Log
+
+	list, err := fleet.ListGameServerSet(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	// Agones fetches Fleet again here... is that needed?
+	fleetCopy := fleet.DeepCopy()
+	fleetCopy.Status.Replicas = 0
+	fleetCopy.Status.ReadyReplicas = 0
+	fleetCopy.Status.AllocatedReplicas = 0
+	fleetCopy.Status.Instances = 0
+	fleetCopy.Status.ReadyInstances = 0
+	fleetCopy.Status.AllocatedInstances = 0
+
+	for _, gsSet := range list {
+		fleetCopy.Status.Replicas += gsSet.Status.Replicas
+		fleetCopy.Status.ReadyReplicas += gsSet.Status.ReadyReplicas
+		fleetCopy.Status.AllocatedReplicas += gsSet.Status.AllocatedReplicas
+		fleetCopy.Status.Instances += gsSet.Status.Instances
+		fleetCopy.Status.ReadyInstances += gsSet.Status.ReadyInstances
+		fleetCopy.Status.AllocatedInstances += gsSet.Status.AllocatedInstances
+	}
+
+	// TODO: Aggregate player status
+
+	if err = r.Status().Update(ctx, fleetCopy); err != nil {
+		return errors.Wrapf(err, "error updating status")
+	}
+
+	return nil
 }
