@@ -140,7 +140,7 @@ func (r *Reconciler) cleanupUnhealthyReplicas(ctx context.Context, rest []*singu
 		scaledDownCount := int32(integer.IntMin(int(maxCleanupCount-totalScaledDown), int(gsSet.Spec.Replicas-gsSet.Status.ReadyReplicas)))
 		newReplicasCount := gsSet.Spec.Replicas - scaledDownCount
 		if newReplicasCount > gsSet.Spec.Replicas {
-			return 0, fmt.Errorf("invalid scale down request %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
+			return 0, fmt.Errorf("invalid scale down request for gameserverset %s: %d -> %d", gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
 		}
 
 		gsSetCopy := gsSet.DeepCopy()

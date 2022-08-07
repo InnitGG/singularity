@@ -15,7 +15,20 @@ spec:
     singular: gameserverset
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.scheduling
+      name: Scheduling
+      type: string
+    - jsonPath: .status.replicas
+      name: Replicas
+      type: integer
+    - jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - jsonPath: .status.allocatedReplicas
+      name: Allocated
+      type: integer
+    name: v1
     schema:
       openAPIV3Schema:
         description: GameServerSet is the Schema for the GameServerSets API
@@ -8030,6 +8043,9 @@ spec:
               shutdownInstances:
                 format: int32
                 type: integer
+              shutdownReplicas:
+                format: int32
+                type: integer
             required:
             - allocatedInstances
             - allocatedReplicas
@@ -8038,6 +8054,7 @@ spec:
             - readyReplicas
             - replicas
             - shutdownInstances
+            - shutdownReplicas
             type: object
         type: object
     served: true

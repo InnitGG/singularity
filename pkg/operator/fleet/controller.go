@@ -41,7 +41,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Retrieve GameServerSets associated with this Fleet
-	list, err := fleet.ListGameServerSet(ctx, r)
+	list, err := fleet.ListGameServerSet(ctx, r.Client)
 	if err != nil {
 		l.Error(err, "reconcile: unable to list GameServerSet", "fleet", req.Name)
 
@@ -130,7 +130,7 @@ func (r *Reconciler) deleteEmptyGameServerSets(ctx context.Context, fleet *singu
 	for _, gsSet := range list {
 		if gsSet.Status.Replicas == 0 && gsSet.Status.ShutdownReplicas == 0 {
 			if err := r.Delete(ctx, gsSet, policy); err != nil {
-				return errors.Wrapf(err, "error deleting gameserverset %s/%s", gsSet.ObjectMeta.Namespace, gsSet.ObjectMeta.Name)
+				return errors.Wrapf(err, "error deleting gameserverset %s", gsSet.ObjectMeta.Name)
 			}
 
 			r.Recorder.Eventf(fleet, v1.EventTypeNormal, "DeletingGameServerSet", "deleting inactive GameServerSet %s", gsSet.ObjectMeta.Name)
@@ -149,6 +149,19 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 			return errors.Wrapf(err, "error creating gameserverset %s", active.ObjectMeta.Name)
 		}
 
+		gsSetCopy := active.DeepCopy()
+		gsSetCopy.Status.Replicas = 0
+		gsSetCopy.Status.ReadyReplicas = 0
+		gsSetCopy.Status.AllocatedReplicas = 0
+		gsSetCopy.Status.ShutdownReplicas = 0
+		gsSetCopy.Status.Instances = 0
+		gsSetCopy.Status.ReadyInstances = 0
+		gsSetCopy.Status.AllocatedInstances = 0
+		gsSetCopy.Status.ShutdownInstances = 0
+		if err := r.Status().Update(ctx, gsSetCopy); err != nil {
+			return errors.Wrapf(err, "error updating status for gameserverset %s", active.ObjectMeta.Name)
+		}
+
 		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "CreatingGameServerSet", "created GameServerSet %s", active.ObjectMeta.Name)
 		return nil
 	}
@@ -158,7 +171,7 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 		gsSetCopy.Spec.Replicas = replicas
 		gsSetCopy.Spec.Scheduling = fleet.Spec.Scheduling
 		if err := r.Update(ctx, gsSetCopy); err != nil {
-			return errors.Wrapf(err, "error updating replicas for gameserverset %s/%s", active.ObjectMeta.Namespace, active.ObjectMeta.Name)
+			return errors.Wrapf(err, "error updating replicas for gameserverset %s", active.ObjectMeta.Name)
 		}
 		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "ScalingGameServerSet",
 			"scaling active GameServerSet %s from %d to %d", active.ObjectMeta.Name, active.Spec.Replicas, gsSetCopy.Spec.Replicas)
@@ -170,7 +183,7 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 func (r *Reconciler) updateStatus(ctx context.Context, fleet *singularityv1.Fleet) error {
 	// TODO: Log
 
-	list, err := fleet.ListGameServerSet(ctx, r)
+	list, err := fleet.ListGameServerSet(ctx, r.Client)
 	if err != nil {
 		return err
 	}

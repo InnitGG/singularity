@@ -7,6 +7,10 @@ import (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Scheduling",type=string,JSONPath=`.spec.scheduling`
+//+kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.status.replicas`
+//+kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
+//+kubebuilder:printcolumn:name="Allocated",type=integer,JSONPath=`.status.allocatedReplicas`
 
 // GameServerSet is the Schema for the GameServerSets API
 type GameServerSet struct {

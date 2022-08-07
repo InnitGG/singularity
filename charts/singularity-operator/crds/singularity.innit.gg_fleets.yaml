@@ -15,7 +15,14 @@ spec:
     singular: fleet
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.scheduling
+      name: Scheduling
+      type: string
+    - jsonPath: .spec.replicas
+      name: Replicas
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: Fleet is the Schema for the fleets API
@@ -8076,9 +8083,6 @@ spec:
               replicas:
                 format: int32
                 type: integer
-              shutdownInstances:
-                format: int32
-                type: integer
             required:
             - allocatedInstances
             - allocatedReplicas
@@ -8086,14 +8090,13 @@ spec:
             - readyInstances
             - readyReplicas
             - replicas
-            - shutdownInstances
             type: object
         type: object
     served: true
     storage: true
     subresources:
       scale:
-        labelSelectorPath: .status.readyReplicas
+        labelSelectorPath: .status.labelSelector
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}
