@@ -19,8 +19,11 @@ spec:
     - jsonPath: .spec.scheduling
       name: Scheduling
       type: string
+    - jsonPath: .spec.replicas
+      name: Desired
+      type: integer
     - jsonPath: .status.replicas
-      name: Replicas
+      name: Current
       type: integer
     - jsonPath: .status.readyReplicas
       name: Ready

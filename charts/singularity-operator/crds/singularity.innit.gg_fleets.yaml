@@ -20,7 +20,10 @@ spec:
       name: Scheduling
       type: string
     - jsonPath: .spec.replicas
-      name: Replicas
+      name: Desired
+      type: string
+    - jsonPath: .status.replicas
+      name: Current
       type: string
     name: v1
     schema:

@@ -18,7 +18,8 @@ const (
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector
 //+kubebuilder:printcolumn:name="Scheduling",type=string,JSONPath=`.spec.scheduling`
-//+kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`
+//+kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
+//+kubebuilder:printcolumn:name="Current",type=string,JSONPath=`.status.replicas`
 
 // Fleet is the Schema for the fleets API
 type Fleet struct {
