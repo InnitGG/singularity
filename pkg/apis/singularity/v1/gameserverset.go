@@ -1,8 +1,16 @@
 package v1
 
 import (
+	"context"
 	"innit.gg/singularity/pkg/apis"
+	"innit.gg/singularity/pkg/apis/singularity"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// GameServerSetNameLabel is the name of GameServerSet which owns resources like GameServer
+	GameServerSetNameLabel = singularity.GroupName + "/gameserverset"
 )
 
 //+kubebuilder:object:root=true
@@ -77,13 +85,35 @@ func (gsSet *GameServerSet) GameServer() *GameServer {
 	ref := metav1.NewControllerRef(gsSet, GroupVersion.WithKind("GameServerSet"))
 	gs.ObjectMeta.OwnerReferences = append(gs.ObjectMeta.OwnerReferences, *ref)
 
-	// Append Fleet name
+	// Append Fleet name and GameServerSet name labels
 	if gs.ObjectMeta.Labels == nil {
-		gs.ObjectMeta.Labels = make(map[string]string, 1)
+		gs.ObjectMeta.Labels = make(map[string]string, 2)
 	}
 
 	gs.ObjectMeta.Labels[FleetNameLabel] = gsSet.ObjectMeta.Labels[FleetNameLabel]
+	gs.ObjectMeta.Labels[GameServerSetNameLabel] = gsSet.ObjectMeta.Name
 	return gs
+}
+
+// ListGameServer lists all owned GameServer
+func (gsSet *GameServerSet) ListGameServer(ctx context.Context, c client.Client) ([]*GameServer, error) {
+	list := &GameServerList{}
+	labelSelector := client.MatchingLabels{
+		GameServerSetNameLabel: gsSet.ObjectMeta.Name,
+	}
+	if err := c.List(ctx, list, labelSelector); err != nil {
+		return []*GameServer{}, err
+	}
+
+	// Make sure that the Fleet actually owns it
+	var result []*GameServer
+	for _, gs := range list.Items {
+		if metav1.IsControlledBy(&gs, gsSet) {
+			result = append(result, &gs)
+		}
+	}
+
+	return result, nil
 }
 
 func init() {

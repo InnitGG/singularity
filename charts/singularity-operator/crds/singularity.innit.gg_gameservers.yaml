@@ -15,7 +15,14 @@ spec:
     singular: gameserver
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .spec.instances
+      name: Desired
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: GameServer is the Schema for the GameServers API
@@ -7195,11 +7202,6 @@ spec:
             description: GameServerStatus defines the observed state of GameServer
             properties:
               state:
-                enum:
-                - NotReady
-                - Ready
-                - Allocated
-                - Drain
                 type: string
             required:
             - state

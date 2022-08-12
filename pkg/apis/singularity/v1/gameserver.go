@@ -4,6 +4,7 @@ import (
 	"innit.gg/singularity/pkg/apis"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sort"
 )
 
 const (
@@ -29,10 +30,16 @@ const (
 	GameServerStateDrain GameServerState = "Drain"
 	// GameServerStateShutdown indicates that the server has shutdown and everything has to be removed from the cluster
 	GameServerStateShutdown GameServerState = "Shutdown"
+	// GameServerStateError indicates that something irrecoverable occurred
+	GameServerStateError GameServerState = "Error"
+	// GameServerStateUnhealthy indicates that the server failed its health checks
+	GameServerStateUnhealthy GameServerState = "Unhealthy"
 )
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+//+kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.instances`
 
 // GameServer is the Schema for the GameServers API
 type GameServer struct {
@@ -75,8 +82,7 @@ type GameServerState string
 
 // GameServerStatus defines the observed state of GameServer
 type GameServerStatus struct {
-	// +kubebuilder:validation:Enum=NotReady;Ready;Allocated;Drain
-	State string `json:"state"`
+	State GameServerState `json:"state"`
 }
 
 type GameServerDrainStrategy struct {
@@ -90,6 +96,33 @@ type GameServerPort struct {
 	Name          string          `json:"name"`
 	PortPolicy    apis.PortPolicy `json:"portPolicy"`
 	ContainerPort string          `json:"containerPort"`
+}
+
+// IsDeletable returns whether the server is currently allocated/reserved and is not already in the
+// process of being deleted
+func (gs *GameServer) IsDeletable() bool {
+	if gs.Status.State == GameServerStateAllocated {
+		return !gs.ObjectMeta.DeletionTimestamp.IsZero()
+	}
+
+	return true
+}
+
+// IsBeingDeleted returns true if the server is in the process of being deleted.
+func (gs *GameServer) IsBeingDeleted() bool {
+	return !gs.ObjectMeta.DeletionTimestamp.IsZero() || gs.Status.State == GameServerStateShutdown
+}
+
+// SortDescending returns GameServers sorted by newest created
+func SortDescending(list []*GameServer) []*GameServer {
+	sort.Slice(list, func(i, j int) bool {
+		a := list[i]
+		b := list[j]
+
+		return a.ObjectMeta.CreationTimestamp.Before(&b.ObjectMeta.CreationTimestamp)
+	})
+
+	return list
 }
 
 func init() {
