@@ -31,6 +31,9 @@ spec:
     - jsonPath: .status.allocatedReplicas
       name: Allocated
       type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

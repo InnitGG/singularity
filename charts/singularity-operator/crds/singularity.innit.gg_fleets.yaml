@@ -25,6 +25,9 @@ spec:
     - jsonPath: .status.replicas
       name: Current
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

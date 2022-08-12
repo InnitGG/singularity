@@ -20,6 +20,7 @@ const (
 //+kubebuilder:printcolumn:name="Current",type=integer,JSONPath=`.status.replicas`
 //+kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
 //+kubebuilder:printcolumn:name="Allocated",type=integer,JSONPath=`.status.allocatedReplicas`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // GameServerSet is the Schema for the GameServerSets API
 type GameServerSet struct {

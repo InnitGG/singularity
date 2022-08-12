@@ -38,8 +38,9 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.state`
 //+kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.instances`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // GameServer is the Schema for the GameServers API
 type GameServer struct {

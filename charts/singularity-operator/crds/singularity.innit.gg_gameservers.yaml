@@ -17,11 +17,14 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.state
-      name: State
+      name: Status
       type: string
     - jsonPath: .spec.instances
       name: Desired
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

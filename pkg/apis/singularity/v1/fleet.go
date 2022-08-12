@@ -20,6 +20,7 @@ const (
 //+kubebuilder:printcolumn:name="Scheduling",type=string,JSONPath=`.spec.scheduling`
 //+kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
 //+kubebuilder:printcolumn:name="Current",type=string,JSONPath=`.status.replicas`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Fleet is the Schema for the fleets API
 type Fleet struct {
