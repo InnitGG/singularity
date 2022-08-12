@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -37,12 +38,13 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// TODO: retry on error?
 
-	r.Log.Info("reconcile", "req", req)
+	l := log.FromContext(ctx)
+	l.Info("reconcile")
 
 	// Retrieve the GameServerSet resource from the cluster, ignoring if it was deleted
 	gsSet := &singularityv1.GameServerSet{}
 	if err := r.Get(ctx, req.NamespacedName, gsSet); err != nil {
-		r.Log.Info("reconcile: resource deleted", "gsSet", req.Name)
+		l.Info("reconcile: resource deleted", "gsSet", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -52,7 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	createCount, toDelete, isPartial := computeReconciliationAction(list, int(gsSet.Spec.Replicas))
-	r.Log.WithValues("create", createCount, "delete", len(toDelete), "partial", isPartial).Info("reconcile")
+	l.Info("reconcile action", "create", createCount, "delete", len(toDelete), "partial", isPartial)
 
 	// The GameServerSet is marked for deletion.
 	if !gsSet.DeletionTimestamp.IsZero() {
@@ -61,15 +63,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if createCount > 0 {
 		if err = r.createGameServers(ctx, gsSet, createCount); err != nil {
-			r.Log.Error(err, "reconcile: error creating GameServers")
+			l.Error(err, "reconcile: error creating GameServers")
 		}
 	}
 
 	if len(toDelete) > 0 {
 		if err := r.deleteGameServers(ctx, gsSet, toDelete); err != nil {
-			r.Log.Error(err, "reconcile: error deleting GameServers")
+			l.Error(err, "reconcile: error deleting GameServers")
 		}
 		// TODO
+	}
+
+	if err := r.updateStatus(ctx, gsSet, list); err != nil {
+		return ctrl.Result{}, nil
 	}
 
 	if isPartial {
@@ -210,7 +216,8 @@ func computeReconciliationAction(list []*singularityv1.GameServer, targetReplica
 }
 
 func (r *Reconciler) createGameServers(ctx context.Context, gsSet *singularityv1.GameServerSet, count int) error {
-	r.Log.WithValues("count", count).Info("reconcile: creating GameServers")
+	l := log.FromContext(ctx)
+	l.WithValues("count", count).Info("reconcile: creating GameServers")
 
 	return parallelize(newGameServersChannel(count, gsSet), maxCreationParalellism, func(gs *singularityv1.GameServer) error {
 		if err := r.Create(ctx, gs); err != nil {
@@ -223,7 +230,8 @@ func (r *Reconciler) createGameServers(ctx context.Context, gsSet *singularityv1
 }
 
 func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1.GameServerSet, toDelete []*singularityv1.GameServer) error {
-	r.Log.WithValues("count", len(toDelete)).Info("reconcile: deleting gameservers from gameserverset %s", gsSet.ObjectMeta.Name)
+	l := log.FromContext(ctx)
+	l.Info("reconcile: deleting gameservers from gameserverset", "count", len(toDelete), "gsSet", gsSet.ObjectMeta.Name)
 
 	return parallelize(gameServerListToChannel(toDelete), maxDeletionParallelism, func(gs *singularityv1.GameServer) error {
 		// We should not delete the GameServers directly, as we would like the GameServer controller to handle deletion.
@@ -238,4 +246,44 @@ func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1
 		r.Recorder.Eventf(gsSet, v1.EventTypeNormal, "SuccessfulDelete", "Deleted GameServer in state %s: %v", gs.Status.State, gs.ObjectMeta.Name)
 		return nil
 	})
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, gsSet *singularityv1.GameServerSet, list []*singularityv1.GameServer) error {
+	// We don't need to take the reconciliation action into account here.
+	// The changed list will be reflected upon in the next cycle.
+	status := computeStatus(list)
+	if gsSet.Status != status {
+		// Only change the status if it's not equal to the current one.
+		gsSetCopy := gsSet.DeepCopy()
+		gsSetCopy.Status = status
+		if err := r.Status().Update(ctx, gsSetCopy); err != nil {
+			return errors.Wrapf(err, "error updating status for gameserverset %s", gsSet.ObjectMeta.Name)
+		}
+	}
+
+	return nil
+}
+
+func computeStatus(list []*singularityv1.GameServer) singularityv1.GameServerSetStatus {
+	var status singularityv1.GameServerSetStatus
+
+	for _, gs := range list {
+		if gs.IsBeingDeleted() {
+			// Don't count replicas that are being deleted
+			status.ShutdownReplicas++
+			continue
+		}
+
+		status.Replicas++
+		switch gs.Status.State {
+		case singularityv1.GameServerStateReady:
+			status.ReadyReplicas++
+		case singularityv1.GameServerStateAllocated:
+			status.AllocatedReplicas++
+		}
+
+		// TODO: Instances
+	}
+
+	return status
 }

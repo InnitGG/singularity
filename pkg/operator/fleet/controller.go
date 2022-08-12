@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 )
@@ -29,20 +30,20 @@ type Reconciler struct {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// TODO: retry on error?
-
-	r.Log.Info("reconcile", "req", req)
+	l := log.FromContext(ctx)
+	l.Info("reconcile")
 
 	// Retrieve the Fleet resource from the cluster, ignoring if it was deleted
 	fleet := &singularityv1.Fleet{}
 	if err := r.Get(ctx, req.NamespacedName, fleet); err != nil {
-		r.Log.Info("reconcile: resource deleted", "fleet", req.Name)
+		l.Info("reconcile: resource deleted", "fleet", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Retrieve GameServerSets associated with this Fleet
 	list, err := fleet.ListGameServerSet(ctx, r.Client)
 	if err != nil {
-		r.Log.Error(err, "reconcile: unable to list GameServerSet", "fleet", req.Name)
+		l.Error(err, "reconcile: unable to list GameServerSet", "fleet", req.Name)
 
 		// TODO: is this the correct way?
 		return ctrl.Result{
@@ -54,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Find the active GameServerSet and return the rest
 	active, rest := r.filterActiveGameServerSet(fleet, list)
 	if active == nil {
-		r.Log.Info("reconcile: creating GameServerSet", "fleet", req.Name)
+		l.Info("reconcile: creating GameServerSet", "fleet", req.Name)
 
 		// If there isn't an active GameServerSet, create one.
 		// However, don't apply it to the cluster yet.
@@ -64,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Run the deployment cycle
 	replicas, err := r.handleDeployment(ctx, fleet, active, rest)
 	if err != nil {
-		r.Log.Error(err, "reconcile: deployment cycle failed", "fleet", req.Name)
+		l.Error(err, "reconcile: deployment cycle failed", "fleet", req.Name)
 		return ctrl.Result{}, err
 	}
 
