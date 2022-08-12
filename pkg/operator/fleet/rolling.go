@@ -151,7 +151,7 @@ func (r *Reconciler) cleanupUnhealthyReplicas(ctx context.Context, rest []*singu
 		}
 
 		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "ScalingGameServerSet",
-			"scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
+			"Scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
 
 		rest[i] = gsSetCopy
 	}

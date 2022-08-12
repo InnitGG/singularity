@@ -52,6 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	createCount, toDelete, isPartial := computeReconciliationAction(list, int(gsSet.Spec.Replicas))
+	r.Log.WithValues("create", createCount, "delete", len(toDelete), "partial", isPartial).Info("reconcile")
 
 	// The GameServerSet is marked for deletion.
 	if !gsSet.DeletionTimestamp.IsZero() {
@@ -60,13 +61,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if createCount > 0 {
 		if err = r.createGameServers(ctx, gsSet, createCount); err != nil {
-			r.Log.Error(err, "error creating gameservers")
+			r.Log.Error(err, "reconcile: error creating GameServers")
 		}
 	}
 
 	if len(toDelete) > 0 {
 		if err := r.deleteGameServers(ctx, gsSet, toDelete); err != nil {
-			r.Log.Error(err, "error deleting gameservers")
+			r.Log.Error(err, "reconcile: error deleting GameServers")
 		}
 		// TODO
 	}
@@ -209,20 +210,20 @@ func computeReconciliationAction(list []*singularityv1.GameServer, targetReplica
 }
 
 func (r *Reconciler) createGameServers(ctx context.Context, gsSet *singularityv1.GameServerSet, count int) error {
-	r.Log.WithValues("count", count).Info("creating gameservers")
+	r.Log.WithValues("count", count).Info("reconcile: creating GameServers")
 
 	return parallelize(newGameServersChannel(count, gsSet), maxCreationParalellism, func(gs *singularityv1.GameServer) error {
 		if err := r.Create(ctx, gs); err != nil {
 			return errors.Wrapf(err, "error creating gameserver for gameserverset %s", gsSet.ObjectMeta.Name)
 		}
 
-		r.Recorder.Eventf(gsSet, v1.EventTypeNormal, "SuccessfulCreate", "created gameserver: %s", gs.ObjectMeta.Name)
+		r.Recorder.Eventf(gsSet, v1.EventTypeNormal, "SuccessfulCreate", "Created GameServer: %s", gs.ObjectMeta.Name)
 		return nil
 	})
 }
 
 func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1.GameServerSet, toDelete []*singularityv1.GameServer) error {
-	r.Log.WithValues("count", len(toDelete)).Info("deleting gameservers from gameserverset %s", gsSet.ObjectMeta.Name)
+	r.Log.WithValues("count", len(toDelete)).Info("reconcile: deleting gameservers from gameserverset %s", gsSet.ObjectMeta.Name)
 
 	return parallelize(gameServerListToChannel(toDelete), maxDeletionParallelism, func(gs *singularityv1.GameServer) error {
 		// We should not delete the GameServers directly, as we would like the GameServer controller to handle deletion.
@@ -234,7 +235,7 @@ func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1
 			return errors.Wrapf(err, "error updating gameserver %s from status %s to Shutdown status", gs.ObjectMeta.Name, gs.Status.State)
 		}
 
-		r.Recorder.Eventf(gsSet, v1.EventTypeNormal, "SuccessfulDelete", "deleted gameserver in state %s: %v", gs.Status.State, gs.ObjectMeta.Name)
+		r.Recorder.Eventf(gsSet, v1.EventTypeNormal, "SuccessfulDelete", "Deleted GameServer in state %s: %v", gs.Status.State, gs.ObjectMeta.Name)
 		return nil
 	})
 }

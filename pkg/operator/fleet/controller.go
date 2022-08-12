@@ -139,7 +139,7 @@ func (r *Reconciler) deleteEmptyGameServerSets(ctx context.Context, fleet *singu
 				return errors.Wrapf(err, "error deleting gameserverset %s", gsSet.ObjectMeta.Name)
 			}
 
-			r.Recorder.Eventf(fleet, v1.EventTypeNormal, "DeletingGameServerSet", "deleting inactive GameServerSet %s", gsSet.ObjectMeta.Name)
+			r.Recorder.Eventf(fleet, v1.EventTypeNormal, "DeletingGameServerSet", "Deleting inactive GameServerSet %s", gsSet.ObjectMeta.Name)
 		}
 	}
 
@@ -168,7 +168,7 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 			return errors.Wrapf(err, "error updating status for gameserverset %s", active.ObjectMeta.Name)
 		}
 
-		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "CreatingGameServerSet", "created GameServerSet %s", active.ObjectMeta.Name)
+		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "CreatingGameServerSet", "Created GameServerSet %s", active.ObjectMeta.Name)
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 			return errors.Wrapf(err, "error updating replicas for gameserverset %s", active.ObjectMeta.Name)
 		}
 		r.Recorder.Eventf(fleet, v1.EventTypeNormal, "ScalingGameServerSet",
-			"scaling active GameServerSet %s from %d to %d", active.ObjectMeta.Name, active.Spec.Replicas, gsSetCopy.Spec.Replicas)
+			"Scaling active GameServerSet %s from %d to %d", active.ObjectMeta.Name, active.Spec.Replicas, gsSetCopy.Spec.Replicas)
 	}
 
 	return nil
