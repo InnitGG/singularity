@@ -87,6 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&singularityv1.Fleet{}).
+		Owns(&singularityv1.GameServerSet{}).
 		WithLogConstructor(func(req *reconcile.Request) logr.Logger {
 			if req != nil {
 				return r.Log.WithValues("req", req)
