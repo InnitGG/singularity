@@ -56,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	createCount, toDelete, isPartial := computeReconciliationAction(list, int(gsSet.Spec.Replicas))
 	l.Info("reconcile action", "create", createCount, "delete", len(toDelete), "partial", isPartial)
 
-	// The GameServerSet is marked for deletion.
+	// If GameServerSet is marked for deletion, don't do anything.
 	if !gsSet.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}

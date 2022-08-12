@@ -40,6 +40,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// If Fleet is marked for deletion, don't do anything.
+	if !fleet.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, nil
+	}
+
 	// Retrieve GameServerSets associated with this Fleet
 	list, err := fleet.ListGameServerSet(ctx, r.Client)
 	if err != nil {
