@@ -82,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if err = r.updateStatus(ctx, fleet); err != nil {
+	if err = r.updateStatus(ctx, fleet, list); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -192,36 +192,24 @@ func (r *Reconciler) upsertGameServerSet(ctx context.Context, fleet *singularity
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, fleet *singularityv1.Fleet) error {
-	// TODO: Log
-
-	list, err := fleet.ListGameServerSet(ctx, r.Client)
-	if err != nil {
-		return err
-	}
-
-	// Agones fetches Fleet again here... is that needed?
-	fleetCopy := fleet.DeepCopy()
-	fleetCopy.Status.Replicas = 0
-	fleetCopy.Status.ReadyReplicas = 0
-	fleetCopy.Status.AllocatedReplicas = 0
-	fleetCopy.Status.Instances = 0
-	fleetCopy.Status.ReadyInstances = 0
-	fleetCopy.Status.AllocatedInstances = 0
+func (r *Reconciler) updateStatus(ctx context.Context, fleet *singularityv1.Fleet, list []*singularityv1.GameServerSet) error {
+	var status singularityv1.FleetStatus
 
 	for _, gsSet := range list {
-		fleetCopy.Status.Replicas += gsSet.Status.Replicas
-		fleetCopy.Status.ReadyReplicas += gsSet.Status.ReadyReplicas
-		fleetCopy.Status.AllocatedReplicas += gsSet.Status.AllocatedReplicas
-		fleetCopy.Status.Instances += gsSet.Status.Instances
-		fleetCopy.Status.ReadyInstances += gsSet.Status.ReadyInstances
-		fleetCopy.Status.AllocatedInstances += gsSet.Status.AllocatedInstances
+		status.Replicas += gsSet.Status.Replicas
+		status.ReadyReplicas += gsSet.Status.ReadyReplicas
+		status.AllocatedReplicas += gsSet.Status.AllocatedReplicas
+		status.Instances += gsSet.Status.Instances
+		status.ReadyInstances += gsSet.Status.ReadyInstances
+		status.AllocatedInstances += gsSet.Status.AllocatedInstances
 	}
 
 	// TODO: Aggregate player status
-
-	if err = r.Status().Update(ctx, fleetCopy); err != nil {
-		return errors.Wrapf(err, "error updating status")
+	if fleet.Status != status {
+		fleet.Status = status
+		if err := r.Status().Update(ctx, fleet); err != nil {
+			return errors.Wrapf(err, "error updating status")
+		}
 	}
 
 	return nil

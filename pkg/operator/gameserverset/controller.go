@@ -251,26 +251,13 @@ func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1
 func (r *Reconciler) updateStatus(ctx context.Context, gsSet *singularityv1.GameServerSet, list []*singularityv1.GameServer) error {
 	// We don't need to take the reconciliation action into account here.
 	// The changed list will be reflected upon in the next cycle.
-	status := computeStatus(list)
-	if gsSet.Status != status {
-		// Only change the status if it's not equal to the current one.
-		gsSetCopy := gsSet.DeepCopy()
-		gsSetCopy.Status = status
-		if err := r.Status().Update(ctx, gsSetCopy); err != nil {
-			return errors.Wrapf(err, "error updating status for gameserverset %s", gsSet.ObjectMeta.Name)
-		}
-	}
-
-	return nil
-}
-
-func computeStatus(list []*singularityv1.GameServer) singularityv1.GameServerSetStatus {
 	var status singularityv1.GameServerSetStatus
 
 	for _, gs := range list {
 		if gs.IsBeingDeleted() {
-			// Don't count replicas that are being deleted
 			status.ShutdownReplicas++
+
+			// Don't count replicas that are being deleted
 			continue
 		}
 
@@ -285,5 +272,14 @@ func computeStatus(list []*singularityv1.GameServer) singularityv1.GameServerSet
 		// TODO: Instances
 	}
 
-	return status
+	if gsSet.Status != status {
+		// Only change the status if it's not equal to the current one.
+		gsSetCopy := gsSet.DeepCopy()
+		gsSetCopy.Status = status
+		if err := r.Status().Update(ctx, gsSetCopy); err != nil {
+			return errors.Wrapf(err, "error updating status for gameserverset %s", gsSet.ObjectMeta.Name)
+		}
+	}
+
+	return nil
 }
