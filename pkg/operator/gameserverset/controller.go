@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,13 +37,12 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// TODO: retry on error?
 
-	l := log.FromContext(ctx)
-	l.Info("reconcile", "req", req)
+	r.Log.Info("reconcile", "req", req)
 
 	// Retrieve the GameServerSet resource from the cluster, ignoring if it was deleted
 	gsSet := &singularityv1.GameServerSet{}
 	if err := r.Get(ctx, req.NamespacedName, gsSet); err != nil {
-		l.Info("reconcile: resource deleted", "gsSet", req.Name)
+		r.Log.Info("reconcile: resource deleted", "gsSet", req.Name)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -62,13 +60,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if createCount > 0 {
 		if err = r.createGameServers(ctx, gsSet, createCount); err != nil {
-			l.Error(err, "error creating gameservers")
+			r.Log.Error(err, "error creating gameservers")
 		}
 	}
 
 	if len(toDelete) > 0 {
 		if err := r.deleteGameServers(ctx, gsSet, toDelete); err != nil {
-			l.Error(err, "error deleting gameservers")
+			r.Log.Error(err, "error deleting gameservers")
 		}
 		// TODO
 	}

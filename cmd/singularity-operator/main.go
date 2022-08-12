@@ -88,7 +88,7 @@ func main() {
 	if err = (&gameserverset.Reconciler{
 		Client:   mgr.GetClient(),
 		Recorder: mgr.GetEventRecorderFor("gameserverset-controller"),
-		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "GameServerSet"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerSet")
 		os.Exit(1)
@@ -98,7 +98,7 @@ func main() {
 	if err = (&gameserver.Reconciler{
 		Client:   mgr.GetClient(),
 		Recorder: mgr.GetEventRecorderFor("gameserver-controller"),
-		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "GameServer"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServer")
 		os.Exit(1)
@@ -108,7 +108,7 @@ func main() {
 	if err = (&gameserverinstance.Reconciler{
 		Client:   mgr.GetClient(),
 		Recorder: mgr.GetEventRecorderFor("gameserverinstance-controller"),
-		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "Fleet"),
+		Log:      ctrl.Log.WithName("controllers").WithValues("controller", "GameServerInstance"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerInstance")
 		os.Exit(1)
