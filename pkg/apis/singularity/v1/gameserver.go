@@ -2,7 +2,9 @@ package v1
 
 import (
 	"innit.gg/singularity/pkg/apis"
+	"innit.gg/singularity/pkg/apis/singularity"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 )
@@ -34,6 +36,11 @@ const (
 	GameServerStateError GameServerState = "Error"
 	// GameServerStateUnhealthy indicates that the server failed its health checks
 	GameServerStateUnhealthy GameServerState = "Unhealthy"
+
+	// GameServerRole is the GameServer label value for singularity.RoleLabel
+	GameServerRole = "gameserver"
+	// GameServerNameLabel is the name of GameServer which owns resources like v1.Pod
+	GameServerNameLabel = singularity.GroupName + "/fleet"
 )
 
 //+kubebuilder:object:root=true
@@ -114,6 +121,85 @@ func (gs *GameServer) IsBeingDeleted() bool {
 	return !gs.ObjectMeta.DeletionTimestamp.IsZero() || gs.Status.State == GameServerStateShutdown
 }
 
+// Pod creates a Pod according to the template specified in the GameServer resource
+func (gs *GameServer) Pod() *v1.Pod {
+	pod := &v1.Pod{
+		ObjectMeta: *gs.Spec.Template.ObjectMeta.DeepCopy(),
+		Spec:       *gs.Spec.Template.Spec.DeepCopy(),
+	}
+
+	gs.configurePodMeta(pod)
+
+	// TODO: hostPort allocation
+
+	return pod
+}
+
+func (gs *GameServer) ServiceAccount() *v1.ServiceAccount {
+	ref := metav1.NewControllerRef(gs, GroupVersion.WithKind("GameServer"))
+
+	return &v1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gs.Name,
+			Namespace: gs.Namespace,
+			Labels: map[string]string{
+				GameServerNameLabel: gs.ObjectMeta.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ref},
+		},
+	}
+}
+
+func (gs *GameServer) Role() *rbacv1.Role {
+	ref := metav1.NewControllerRef(gs, GroupVersion.WithKind("GameServer"))
+
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gs.Name,
+			Namespace: gs.Namespace,
+			Labels: map[string]string{
+				GameServerNameLabel: gs.ObjectMeta.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ref},
+		},
+		// Only allow access to its own GameServer and Pod resources
+		Rules: []rbacv1.PolicyRule{
+			{
+				Verbs:           []string{"get", "update", "list", "watch"},
+				APIGroups:       []string{GroupVersion.String()},
+				Resources:       []string{"gameservers", "pods"},
+				ResourceNames:   []string{gs.ObjectMeta.Name},
+				NonResourceURLs: nil,
+			},
+		},
+	}
+}
+
+func (gs *GameServer) RoleBinding() *rbacv1.RoleBinding {
+	ref := metav1.NewControllerRef(gs, GroupVersion.WithKind("GameServer"))
+
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gs.ObjectMeta.Name,
+			Namespace: gs.ObjectMeta.Namespace,
+			Labels: map[string]string{
+				GameServerNameLabel: gs.ObjectMeta.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ref},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Name: gs.ObjectMeta.Name,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind: "Role",
+			Name: gs.ObjectMeta.Name,
+		},
+	}
+}
+
 // SortDescending returns GameServers sorted by newest created
 func SortDescending(list []*GameServer) []*GameServer {
 	sort.Slice(list, func(i, j int) bool {
@@ -124,6 +210,31 @@ func SortDescending(list []*GameServer) []*GameServer {
 	})
 
 	return list
+}
+
+func (gs *GameServer) configurePodMeta(pod *v1.Pod) {
+	// Name and namespace needs to match the GameServer
+	pod.ObjectMeta.GenerateName = ""
+	pod.ObjectMeta.Name = gs.ObjectMeta.Name
+	pod.ObjectMeta.Namespace = gs.ObjectMeta.Namespace
+
+	// Make sure that the ServiceAccount is bound
+	pod.Spec.ServiceAccountName = gs.ObjectMeta.Name
+
+	// Reset these, just in case
+	pod.ObjectMeta.ResourceVersion = ""
+	pod.ObjectMeta.UID = ""
+
+	// Append labels
+	if pod.ObjectMeta.Labels == nil {
+		pod.ObjectMeta.Labels = make(map[string]string, 2)
+	}
+	pod.ObjectMeta.Labels[singularity.RoleLabel] = GameServerRole
+	pod.ObjectMeta.Labels[GameServerNameLabel] = gs.ObjectMeta.Name
+
+	// Append GameServer owner reference
+	ref := metav1.NewControllerRef(gs, GroupVersion.WithKind("GameServer"))
+	pod.ObjectMeta.OwnerReferences = append(pod.ObjectMeta.OwnerReferences, *ref)
 }
 
 func init() {

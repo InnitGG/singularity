@@ -83,7 +83,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Fleet")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err = (&gameserverset.Reconciler{
 		Client:   mgr.GetClient(),
@@ -93,7 +92,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerSet")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err = (&gameserver.Reconciler{
 		Client:   mgr.GetClient(),
@@ -103,7 +101,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServer")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err = (&gameserverinstance.Reconciler{
 		Client:   mgr.GetClient(),
@@ -113,6 +110,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GameServerInstance")
 		os.Exit(1)
 	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
