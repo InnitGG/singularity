@@ -43,6 +43,9 @@ const (
 	GameServerRole = "gameserver"
 	// GameServerNameLabel is the name of GameServer which owns resources like v1.Pod
 	GameServerNameLabel = singularity.GroupName + "/fleet"
+
+	// GameServerEnvName is the name of GameServer which owns the pod
+	GameServerEnvName = "SINGULARITY_GAMESERVER_NAME"
 )
 
 //+kubebuilder:object:root=true
@@ -131,6 +134,15 @@ func (gs *GameServer) Pod() *v1.Pod {
 	}
 
 	gs.configurePodMeta(pod)
+
+	// TODO: Only select one container?
+	envName := v1.EnvVar{
+		Name:  GameServerEnvName,
+		Value: gs.ObjectMeta.Name,
+	}
+	for _, container := range pod.Spec.Containers {
+		container.Env = append(container.Env, envName)
+	}
 
 	// TODO: hostPort allocation
 
