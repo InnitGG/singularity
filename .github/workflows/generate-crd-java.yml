@@ -27,6 +27,7 @@ jobs:
             ${IMAGE_NAME}:${IMAGE_TAG} \
             /generate.sh \
             $(find "$(pwd)/charts/singularity-operator/crds" -type f |  sed 's/^/-u /')
+            -n gg.innit.singularity \
             -p gg.innit.singularity.impl.k8s.client \
             -o "$(pwd)/${GEN_DIR}"
           ls -lh ${GEN_DIR}
