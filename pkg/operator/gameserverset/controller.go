@@ -153,18 +153,13 @@ func computeReconciliationAction(list []*singularityv1.GameServer, targetReplica
 		//case singularityv1.GameServerStatePortAllocation:
 		//	podPendingCount++
 		//	handleGameServerUp(gs)
-		case singularityv1.GameServerStateCreating:
+		case singularityv1.GameServerStateCreating,
+			singularityv1.GameServerStateStarting,
+			singularityv1.GameServerStateScheduled:
 			podPendingCount++
 			handleGameServerUp(gs)
-		case singularityv1.GameServerStateStarting:
-			podPendingCount++
-			handleGameServerUp(gs)
-		case singularityv1.GameServerStateScheduled:
-			podPendingCount++
-			handleGameServerUp(gs)
-		//case singularityv1.GameServerStateRequestReady:
-		//	handleGameServerUp(gs)
-		case singularityv1.GameServerStateReady:
+		case singularityv1.GameServerStateRequestReady,
+			singularityv1.GameServerStateReady:
 			handleGameServerUp(gs)
 		//case singularityv1.GameServerStateReserved:
 		//	handleGameServerUp(gs)

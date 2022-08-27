@@ -23,6 +23,8 @@ const (
 	GameServerStateStarting GameServerState = "Starting"
 	// GameServerStateScheduled indicates that the Pod is scheduled in the cluster, basically belonging to a Node
 	GameServerStateScheduled GameServerState = "Scheduled"
+	// GameServerStateRequestReady indicates that the server is requesting to be Ready
+	GameServerStateRequestReady GameServerState = "RequestReady"
 	// GameServerStateReady indicates that the server is ready to accept player (and optionally Allocated)
 	GameServerStateReady GameServerState = "Ready"
 	// GameServerStateAllocated indicates that the server has been allocated and shall not be removed

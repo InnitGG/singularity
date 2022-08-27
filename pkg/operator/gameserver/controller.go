@@ -68,12 +68,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	switch gs.Status.State {
 	case singularityv1.GameServerStateCreating:
 		if gs.ObjectMeta.DeletionTimestamp.IsZero() {
-			if err := r.reconcileGameServerCreation(ctx, gs); err != nil {
+			if err := r.reconcileGameServerCreating(ctx, gs); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 		break
 	case singularityv1.GameServerStateStarting:
+		break
+	case singularityv1.GameServerStateRequestReady:
+		if err := r.reconcileGameServerRequestReady(ctx, gs); err != nil {
+			return ctrl.Result{}, err
+		}
 		break
 	case singularityv1.GameServerStateShutdown:
 		if err := r.reconcileGameServerShutdown(ctx, gs); err != nil {
@@ -131,7 +136,7 @@ func (r *Reconciler) reconcileGameServerDeletion(ctx context.Context, gs *singul
 	return nil
 }
 
-func (r *Reconciler) reconcileGameServerCreation(ctx context.Context, gs *singularityv1.GameServer) error {
+func (r *Reconciler) reconcileGameServerCreating(ctx context.Context, gs *singularityv1.GameServer) error {
 	_, err := r.getGameServerPod(ctx, gs)
 	if k8serrors.IsNotFound(err) {
 		// Only create resources if the backing Pod doesn't exist
@@ -145,6 +150,17 @@ func (r *Reconciler) reconcileGameServerCreation(ctx context.Context, gs *singul
 	gsCopy.Status.State = singularityv1.GameServerStateStarting
 	if err = r.Status().Update(ctx, gsCopy); err != nil {
 		return errors.Wrapf(err, "error updating GameServer %s to Starting state", gs.Name)
+	}
+	return nil
+}
+
+func (r *Reconciler) reconcileGameServerRequestReady(ctx context.Context, gs *singularityv1.GameServer) error {
+	// TODO: Track ready container ID, etc
+
+	gsCopy := gs.DeepCopy()
+	gsCopy.Status.State = singularityv1.GameServerStateReady
+	if err := r.Status().Update(ctx, gsCopy); err != nil {
+		return errors.Wrapf(err, "error updating GameServer %s to Ready state", gs.Name)
 	}
 	return nil
 }
