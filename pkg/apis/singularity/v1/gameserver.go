@@ -167,7 +167,14 @@ func (gs *GameServer) Role() *rbacv1.Role {
 			{
 				Verbs:           []string{"get", "update", "list", "watch"},
 				APIGroups:       []string{GroupVersion.String()},
-				Resources:       []string{"gameservers", "pods"},
+				Resources:       []string{"gameservers"},
+				ResourceNames:   []string{gs.ObjectMeta.Name},
+				NonResourceURLs: nil,
+			},
+			{
+				Verbs:           []string{"get", "update", "list", "watch"},
+				APIGroups:       []string{""}, // Default Kubernetes API group
+				Resources:       []string{"pods"},
 				ResourceNames:   []string{gs.ObjectMeta.Name},
 				NonResourceURLs: nil,
 			},
