@@ -239,7 +239,7 @@ func (r *Reconciler) deleteGameServers(ctx context.Context, gsSet *singularityv1
 
 		// TODO: Draining
 		gsCopy.Status.State = singularityv1.GameServerStateShutdown
-		if err := r.Update(ctx, gsCopy); err != nil {
+		if err := r.Status().Update(ctx, gsCopy); err != nil {
 			return errors.Wrapf(err, "error updating gameserver %s from status %s to Shutdown status", gs.ObjectMeta.Name, gs.Status.State)
 		}
 

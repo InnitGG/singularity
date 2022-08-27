@@ -76,6 +76,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	case singularityv1.GameServerStateStarting:
 		break
 	case singularityv1.GameServerStateShutdown:
+		if err := r.reconcileGameServerShutdown(ctx, gs); err != nil {
+			return ctrl.Result{}, err
+		}
 		break
 	case "":
 		if err := r.reconcileGameServerState(ctx, gs); err != nil {
@@ -122,6 +125,7 @@ func (r *Reconciler) reconcileGameServerDeletion(ctx context.Context, gs *singul
 		return nil
 	}
 
+	// TODO: Delete ServiceAccount, Roles, etc
 	// TODO: Remove finalizers
 
 	return nil
@@ -142,6 +146,16 @@ func (r *Reconciler) reconcileGameServerCreation(ctx context.Context, gs *singul
 	if err = r.Status().Update(ctx, gsCopy); err != nil {
 		return errors.Wrapf(err, "error updating GameServer %s to Starting state", gs.Name)
 	}
+	return nil
+}
+
+func (r *Reconciler) reconcileGameServerShutdown(ctx context.Context, gs *singularityv1.GameServer) error {
+	if err := r.Delete(ctx, gs, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+		return errors.Wrapf(err, "error deleting GameServer %s", gs.Name)
+	}
+
+	r.Recorder.Event(gs, v1.EventTypeNormal, string(gs.Status.State), "Deletion started")
+
 	return nil
 }
 

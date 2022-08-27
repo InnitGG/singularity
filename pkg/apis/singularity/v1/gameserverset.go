@@ -108,9 +108,10 @@ func (gsSet *GameServerSet) ListGameServer(ctx context.Context, c client.Client)
 
 	// Make sure that the Fleet actually owns it
 	var result []*GameServer
-	for _, gs := range list.Items {
-		if metav1.IsControlledBy(&gs, gsSet) {
-			result = append(result, &gs)
+	for i := range list.Items {
+		gs := &list.Items[i]
+		if metav1.IsControlledBy(gs, gsSet) {
+			result = append(result, gs)
 		}
 	}
 
