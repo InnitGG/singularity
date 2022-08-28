@@ -44,6 +44,8 @@ const (
 	// GameServerNameLabel is the name of GameServer which owns resources like v1.Pod
 	GameServerNameLabel = singularity.GroupName + "/fleet"
 
+	// GameServerEnvNamespace is the namespace of GameServer which owns the pod
+	GameServerEnvNamespace = "SINGULARITY_GAMESERVER_NAMESPACE"
 	// GameServerEnvName is the name of GameServer which owns the pod
 	GameServerEnvName = "SINGULARITY_GAMESERVER_NAME"
 )
@@ -135,13 +137,21 @@ func (gs *GameServer) Pod() *v1.Pod {
 
 	gs.configurePodMeta(pod)
 
+	// Make sure that the ServiceAccount is bound
+	pod.Spec.ServiceAccountName = gs.ObjectMeta.Name
+
 	// TODO: Only select one container?
 	envName := v1.EnvVar{
 		Name:  GameServerEnvName,
 		Value: gs.ObjectMeta.Name,
 	}
-	for _, container := range pod.Spec.Containers {
-		container.Env = append(container.Env, envName)
+	envNamespace := v1.EnvVar{
+		Name:  GameServerEnvNamespace,
+		Value: gs.ObjectMeta.Namespace,
+	}
+	for i := range pod.Spec.Containers {
+		container := &pod.Spec.Containers[i]
+		container.Env = append(container.Env, envName, envNamespace)
 	}
 
 	// TODO: hostPort allocation
@@ -179,16 +189,16 @@ func (gs *GameServer) Role() *rbacv1.Role {
 		// Only allow access to its own GameServer and Pod resources
 		Rules: []rbacv1.PolicyRule{
 			{
-				Verbs:           []string{"get", "update", "list", "watch"},
-				APIGroups:       []string{GroupVersion.String()},
-				Resources:       []string{"gameservers"},
+				Verbs:           []string{"get", "update", "patch", "list", "watch"},
+				APIGroups:       []string{singularity.GroupName},
+				Resources:       []string{"gameservers", "gameservers/status"},
 				ResourceNames:   []string{gs.ObjectMeta.Name},
 				NonResourceURLs: nil,
 			},
 			{
-				Verbs:           []string{"get", "update", "list", "watch"},
+				Verbs:           []string{"get", "update", "patch", "list", "watch"},
 				APIGroups:       []string{""}, // Default Kubernetes API group
-				Resources:       []string{"pods"},
+				Resources:       []string{"pods", "pods/status"},
 				ResourceNames:   []string{gs.ObjectMeta.Name},
 				NonResourceURLs: nil,
 			},
@@ -215,8 +225,9 @@ func (gs *GameServer) RoleBinding() *rbacv1.RoleBinding {
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind: "Role",
-			Name: gs.ObjectMeta.Name,
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     gs.ObjectMeta.Name,
 		},
 	}
 }
@@ -238,9 +249,6 @@ func (gs *GameServer) configurePodMeta(pod *v1.Pod) {
 	pod.ObjectMeta.GenerateName = ""
 	pod.ObjectMeta.Name = gs.ObjectMeta.Name
 	pod.ObjectMeta.Namespace = gs.ObjectMeta.Namespace
-
-	// Make sure that the ServiceAccount is bound
-	pod.Spec.ServiceAccountName = gs.ObjectMeta.Name
 
 	// Reset these, just in case
 	pod.ObjectMeta.ResourceVersion = ""
