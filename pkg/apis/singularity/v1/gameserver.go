@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"innit.gg/singularity/pkg/apis"
 	"innit.gg/singularity/pkg/apis/singularity"
 	v1 "k8s.io/api/core/v1"
@@ -229,6 +230,23 @@ func (gs *GameServer) RoleBinding() *rbacv1.RoleBinding {
 			Kind:     "Role",
 			Name:     gs.ObjectMeta.Name,
 		},
+	}
+}
+
+func (gs *GameServer) GameServerInstance(id int) *GameServerInstance {
+	ref := metav1.NewControllerRef(gs, GroupVersion.WithKind("GameServer"))
+
+	// TODO: Copy metadata from instance template
+	return &GameServerInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%d", gs.ObjectMeta.Name, id),
+			Namespace: gs.ObjectMeta.Namespace,
+			Labels: map[string]string{
+				GameServerNameLabel: gs.ObjectMeta.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ref},
+		},
+		Spec: *gs.Spec.InstanceTemplate.Spec.DeepCopy(),
 	}
 }
 

@@ -92,6 +92,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		break
 	}
 
+	if err := r.reconcileGameServerInstances(ctx, gs); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -210,6 +214,7 @@ func (r *Reconciler) getGameServerPod(ctx context.Context, gs *singularityv1.Gam
 func (r *Reconciler) createGameServerResources(ctx context.Context, gs *singularityv1.GameServer) error {
 	l := log.FromContext(ctx)
 
+	// TODO: Make it possible for gameservers to specify their own role. This would be useful for proxies.
 	role := gs.Role()
 	serviceAccount := gs.ServiceAccount()
 	roleBinding := gs.RoleBinding()
@@ -256,6 +261,51 @@ func (r *Reconciler) createGameServerResources(ctx context.Context, gs *singular
 	r.Recorder.Event(gs, v1.EventTypeNormal, string(gs.Status.State), fmt.Sprintf("Pod %s created", pod.ObjectMeta.Name))
 
 	// TODO: network policy
+
+	return nil
+}
+
+// getGameServerInstance returns the GameServerInstance associated with the GameServer
+func (r *Reconciler) getGameServerInstance(ctx context.Context, gs *singularityv1.GameServer, id int) (*singularityv1.GameServerInstance, error) {
+	var gsInstance singularityv1.GameServerInstance
+	key := client.ObjectKey{
+		Namespace: gs.ObjectMeta.Namespace,
+		Name:      fmt.Sprintf("%s-%d", gs.ObjectMeta.Name, id),
+	}
+	if err := r.Get(ctx, key, &gsInstance); err != nil {
+		// The GameServerInstance is not found
+		return nil, err
+	}
+
+	// Check if the Pod is actually controlled by this GameServer
+	if !metav1.IsControlledBy(&gsInstance, gs) {
+		return nil, k8serrors.NewNotFound(v1.Resource("gameserver"), gs.ObjectMeta.Name)
+	}
+
+	return &gsInstance, nil
+}
+
+func (r *Reconciler) reconcileGameServerInstances(ctx context.Context, gs *singularityv1.GameServer) error {
+	l := log.FromContext(ctx)
+
+	instances := int(gs.Spec.Instances)
+	for i := 0; i < instances; i++ {
+		instance, err := r.getGameServerInstance(ctx, gs, i)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return err
+		}
+
+		if instance == nil {
+			gsInstance := gs.GameServerInstance(i)
+
+			l.Info("reconcile: creating gameserverinstance", "id", i)
+			err = r.Create(ctx, gsInstance)
+			if err != nil && !k8serrors.IsAlreadyExists(err) {
+				l.Error(err, "reconcile: error creating gameserverinstance", "gameserverinstance", gsInstance)
+				return errors.Wrapf(err, "error creating GameServerInstance for GameServer %s", gs.ObjectMeta.Name)
+			}
+		}
+	}
 
 	return nil
 }

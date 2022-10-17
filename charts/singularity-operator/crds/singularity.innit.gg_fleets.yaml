@@ -144,8 +144,13 @@ spec:
                               capacity:
                                 format: int32
                                 type: integer
+                              extra:
+                                type: string
+                              map:
+                                type: string
                             required:
                             - capacity
+                            - map
                             type: object
                         type: object
                       instances:

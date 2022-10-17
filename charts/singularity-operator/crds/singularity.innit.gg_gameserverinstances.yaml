@@ -15,7 +15,14 @@ spec:
     singular: gameserverinstance
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: GameServerInstance is the Schema for the GameServerInstances
@@ -39,17 +46,18 @@ spec:
               capacity:
                 format: int32
                 type: integer
+              extra:
+                type: string
+              map:
+                type: string
             required:
             - capacity
+            - map
             type: object
           status:
             description: GameServerInstanceStatus defines the observed state of GameServerInstance
             properties:
               state:
-                enum:
-                - NotReady
-                - Ready
-                - Allocated
                 type: string
             required:
             - state
