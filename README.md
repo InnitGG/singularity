@@ -3,6 +3,8 @@
 A framework for running game servers on top of Kubernetes. This project is heavily inspired
 by [Agones](https://github.com/googleforgames/agones). Singularity is licensed under [GNU AGPLv3](COPYING).
 
+> **Note:** this project is heavily W.I.P and is not ready for production.
+
 ## Operator
 
 Operator is the main component of **singularity**. It is responsible for reconciling CRDs within the cluster.
