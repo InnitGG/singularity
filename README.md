@@ -1,7 +1,7 @@
 # singularity
 
 A framework for running game servers on top of Kubernetes. This project is heavily inspired
-by [Agones](https://github.com/googleforgames/agones).
+by [Agones](https://github.com/googleforgames/agones). Singularity is licensed under [GNU AGPLv3](COPYING).
 
 ## Operator
 
